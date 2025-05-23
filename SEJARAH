@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Interaktif ABCD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            overflow: hidden; /* Mencegah scroll jika konten terlalu besar */
+        }
+
+        .screen {
+            display: none; /* Sembunyikan semua layar secara default */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            position: absolute; /* Agar layar bisa tumpang tindih */
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: flex; /* Tampilkan layar yang aktif */
+            z-index: 1; /* Pastikan layar aktif di atas */
+        }
+
+        /* Layar Pemilihan Tema */
+        #theme-selection-screen {
+            background-image: url('garuda.png'); /* GANTI DENGAN PATH GAMBAR GARUDA ANDA */
+            background-size: contain; /* Atau 'cover' jika ingin memenuhi layar */
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f0f0f0; /* Warna fallback jika gambar tidak ada */
+        }
+
+        .theme-container {
+            background-color: rgba(255, 255, 255, 0.9); /* Semi transparan agar Garuda tetap terlihat */
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #theme-selection-screen h1 {
+            color: #c0392b; /* Warna yang senada dengan Garuda/Merah Putih */
+            margin-bottom: 30px;
+        }
+
+        .theme-button {
+            display: block;
+            width: 280px; /* Lebar tombol */
+            max-width: 90%;
+            padding: 18px 25px;
+            margin: 15px auto;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: white;
+            background-color: #e74c3c; /* Merah */
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .theme-button:hover {
+            background-color: #c0392b; /* Merah lebih gelap */
+            transform: translateY(-2px);
+        }
+
+        .credits {
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        /* Layar Kuis */
+        #quiz-screen {
+            background: linear-gradient(to bottom, #FF0000 50%, #FFFFFF 50%); /* Merah Putih */
+        }
+
+        .quiz-container {
+            background-color: rgba(255, 255, 255, 0.95); /* Sedikit lebih opak dari pemilihan tema */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 600px;
+        }
+
+        #question-number {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        #question-text {
+            font-size: 1.4em; /* Ukuran soal sedang */
+            margin-bottom: 25px;
+            min-height: 60px; /* Agar layout tidak berubah drastis */
+            color: #2c3e50;
+            line-height: 1.5;
+        }
+
+        #options-container button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            font-size: 1.1em;
+            background-color: #3498db; /* Biru */
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #options-container button:hover:not(:disabled) {
+            background-color: #2980b9; /* Biru lebih gelap */
+            transform: translateY(-1px);
+        }
+
+        #options-container button:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #options-container button.correct {
+            background-color: #2ecc71 !important; /* Hijau untuk jawaban benar */
+        }
+        #options-container button.incorrect {
+            background-color: #e74c3c !important; /* Merah untuk jawaban salah yg dipilih user */
+        }
+        #options-container button.show-correct { /* Untuk menyorot jawaban yg benar jika user salah */
+            border: 3px solid #27ae60;
+            box-shadow: 0 0 10px #27ae60;
+            animation: pulse-correct 1s infinite alternate;
+        }
+
+        @keyframes pulse-correct {
+            from { transform: scale(1); }
+            to { transform: scale(1.03); }
+        }
+
+
+        #feedback-area {
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            min-height: 30px; /* Jaga ruang untuk feedback */
+        }
+        #feedback-area.correct {
+            color: #27ae60; /* Hijau */
+        }
+        #feedback-area.incorrect {
+            color: #c0392b; /* Merah */
+        }
+
+
+        /* Layar Hasil */
+        #results-screen {
+            background-color: #ecf0f1; /* Abu-abu muda */
+        }
+        .results-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh; /* Batasi tinggi agar tombol kembali terlihat */
+            overflow-y: auto;
+        }
+
+        #final-score {
+            font-size: 1.8em;
+            color: #2980b9;
+            margin-bottom: 20px;
+        }
+
+        #results-details .result-item {
+            text-align: left;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 5px solid;
+            background-color: #f9f9f9;
+        }
+        #results-details .result-item strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        #results-details .result-item span {
+            display: block;
+            font-size: 0.95em;
+        }
+
+        #results-details .result-item.correct {
+            border-left-color: #2ecc71; /* Hijau */
+            background-color: #e8f8f0;
+        }
+        #results-details .result-item.correct .user-answer {
+            color: #27ae60;
+        }
+
+        #results-details .result-item.incorrect {
+            border-left-color: #e74c3c; /* Merah */
+            background-color: #fdedec;
+        }
+        #results-details .result-item.incorrect .user-answer {
+            color: #c0392b;
+            text-decoration: line-through;
+        }
+        #results-details .result-item.incorrect .correct-answer-info {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+
+        .action-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            margin-top: 20px;
+        }
+        .action-button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Elemen Kejutan */
+        .surprise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; /* Awalnya tersembunyi */
+            align-items: center;
+            justify-content: center;
+            z-index: 10; /* Di atas segalanya kecuali mungkin pop-up lain */
+            background-color: rgba(0,0,0,0.3); /* Latar belakang semi-transparan */
+            pointer-events: none; /* Agar tidak menghalangi klik di bawahnya saat tidak aktif */
+        }
+        .surprise.active {
+            display: flex;
+        }
+
+        #correct-surprise img {
+            max-width: 80%;
+            max-height: 80%;
+            border-radius: 10px;
+        }
+
+        #incorrect-surprise .wrong-mark {
+            font-size: 150px; /* Ukuran simbol X */
+            color: #e74c3c;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px 30px;
+            border-radius: 20px;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        /* Responsif */
+        @media (max-width: 600px) {
+            #question-text {
+                font-size: 1.2em;
+            }
+            #options-container button {
+                font-size: 1em;
+                padding: 12px;
+            }
+            .theme-button {
+                width: 250px;
+                padding: 15px 20px;
+                font-size: 1em;
+            }
+            .theme-container h1 {
+                font-size: 1.8em;
+            }
+            .results-container h1 {
+                font-size: 1.8em;
+            }
+            #final-score {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Layar Pemilihan Tema -->
+    <div id="theme-selection-screen" class="screen active">
+        <div class="theme-container">
+            <h1>Pilih Tema Kuis</h1>
+            <button class="theme-button" data-theme="fatmawati">Tema 1: Fatmawati</button>
+            <button class="theme-button" data-theme="mohhatta">Tema 2: Moh Hatta</button>
+            <button class="theme-button" data-theme="soekarno">Tema 3: Soekarno</button>
+            <p class="credits">Created By Fauzan & Rio</p>
+        </div>
+    </div>
+
+    <!-- Layar Kuis -->
+    <div id="quiz-screen" class="screen">
+        <div class="quiz-container">
+            <p id="question-number"></p>
+            <h2 id="question-text"></h2>
+            <div id="options-container">
+                <!-- Pilihan jawaban akan digenerate oleh JavaScript -->
+            </div>
+            <div id="feedback-area"></div>
+        </div>
+    </div>
+
+    <!-- Layar Hasil -->
+    <div id="results-screen" class="screen">
+        <div class="results-container">
+            <h1>Hasil Kuis</h1>
+            <h2 id="final-score"></h2>
+            <div id="results-details">
+                <!-- Detail jawaban benar/salah akan ditampilkan di sini -->
+            </div>
+            <button id="back-to-themes-button" class="action-button">Kembali ke Pemilihan Tema</button>
+        </div>
+    </div>
+
+    <!-- Elemen Kejutan (Awalnya Tersembunyi) -->
+    <div id="correct-surprise" class="surprise">
+        <img src="kembang-api.gif" alt="Benar!"> <!-- GANTI DENGAN PATH GAMBAR KEMBANG API ANDA -->
+    </div>
+    <div id="incorrect-surprise" class="surprise">
+        <span class="wrong-mark">❌</span> <!-- Simbol X merah besar -->
+    </div>
+
+    <script>
+        // ====================================================================================
+        // DATA KUIS
+        // ====================================================================================
+        const quizData = {
+            fatmawati: [ // Tema 1: Fatmawati
+                {
+                    question: "Makanan apa yang dimakan saat bersinggah di pondok sawah saat perjalanan Rengasdengklok?",
+                    options: ["Pisang rebus", "Ubi jalar kukus", "Jagung bakar", "Singkong goreng"],
+                    answer: "Pisang rebus"
+                },
+                {
+                    question: "Siapakah tokoh yang selalu bilang 'revolusi akan berjalan' kepada Soekarno di Rengasdengklok?",
+                    options: ["Wikana", "Soekarni", "Chaerul Saleh", "Sayuti Melik"],
+                    answer: "Soekarni"
+                },
+                {
+                    question: "Saat dirumah Djiaw Kie Siong di Rengasdengklok, makanan apa yang mereka makan?",
+                    options: ["Sop dan Nasi", "Bubur ayam dan teh hangat", "Nasi goreng dan telur mata sapi", "Mie rebus dan kerupuk"],
+                    answer: "Sop dan Nasi"
+                },
+                {
+                    question: "Saat menyamar di malam hari untuk mencari informasi, Fatmawati menyamar menjadi profesi apa?",
+                    options: ["Penjual jamu", "Tukang pecel", "Pedagang buah keliling", "Penjual nasi uduk"],
+                    answer: "Tukang pecel"
+                },
+                {
+                    question: "Ketika ada orang yang berteriak 'bendera belum siap!' maka, dari mana bendera proklamasi saat itu berasal?",
+                    options: [
+                        "Bendera yang dijahit satu setengah tahun lalu saat Guntur masih di dalam kandungan",
+                        "Kain pemberian pedagang Tionghoa sebagai tanda simpati",
+                        "Bendera bekas latihan baris-berbaris pemuda",
+                        "Hasil patungan beberapa tokoh untuk membeli kain di pasar"
+                    ],
+                    answer: "Bendera yang dijahit satu setengah tahun lalu saat Guntur masih di dalam kandungan"
+                }
+            ],
+            mohhatta: [ // Tema 2: Moh Hatta
+                {
+                    question: "Saat Jepang sudah menyerah terhadap sekutu, bagaimana ekspresi/pandangan Sjahrir yang ditujukan untuk memproklamasikan kemerdekaan?",
+                    options: [
+                        "Sjahrir beranggapan bahwa kemerdekaan seharusnya langsung ada di tangan Soekarno dengan kemerdekaan sesegera mungkin tanpa adanya keterlibatan PPKI",
+                        "Sjahrir menyarankan untuk menunggu persetujuan dari pihak Sekutu terlebih dahulu",
+                        "Sjahrir ingin proklamasi ditunda hingga kondisi keamanan lebih stabil",
+                        "Sjahrir berpendapat proklamasi harus dilakukan melalui sidang istimewa PPKI"
+                    ],
+                    answer: "Sjahrir beranggapan bahwa kemerdekaan seharusnya langsung ada di tangan Soekarno dengan kemerdekaan sesegera mungkin tanpa adanya keterlibatan PPKI"
+                },
+                {
+                    question: "Menurut pandangan Moh Hatta, kapan Indonesia akan merdeka dan rapat setelahnya yang akan dilaksanakan (sebelum peristiwa Rengasdengklok)?",
+                    options: [
+                        "Kemerdekaan akan dilaksanakan 16 Agustus sesuai dengan rapat PPKI yang akan diselenggarakan",
+                        "Kemerdekaan akan dilaksanakan segera pada 15 Agustus tanpa menunggu rapat PPKI",
+                        "Kemerdekaan akan diumumkan setelah pembentukan BPUPKI tahap kedua",
+                        "Kemerdekaan akan menunggu janji Kaisar Hirohito pada akhir Agustus"
+                    ],
+                    answer: "Kemerdekaan akan dilaksanakan 16 Agustus sesuai dengan rapat PPKI yang akan diselenggarakan"
+                },
+                {
+                    question: "Tindakan yang dilakukan oleh para pemuda saat mendesak Hatta untuk segera memproklamasikan kemerdekaan mirip seperti kejadian apa?",
+                    options: [
+                        "Revolusi Bolshevik di Rusia",
+                        "Putsch yang dilakukan oleh Hitler yaitu melakukan kudeta dengan paksa",
+                        "Long March oleh Mao Zedong di Tiongkok",
+                        "Perang Kemerdekaan Amerika"
+                    ],
+                    answer: "Putsch yang dilakukan oleh Hitler yaitu melakukan kudeta dengan paksa"
+                },
+                {
+                    question: "Apa tempat yang pertama kali didatangi oleh Moh Hatta saat tiba di Rengasdengklok?",
+                    options: [
+                        "Rumah seorang kepala desa setempat",
+                        "Asrama PETA yang memiliki kapasitas 40-50 orang",
+                        "Markas Hizbullah di dekat pasar",
+                        "Kantor pemerintahan sipil Jepang"
+                    ],
+                    answer: "Asrama PETA yang memiliki kapasitas 40-50 orang"
+                },
+                {
+                    question: "Mengapa saat pertemuan dengan Mayor Jenderal Nishimura, Moh Hatta terlihat marah?",
+                    options: [
+                        "Karena Nishimura menolak menyediakan fasilitas untuk proklamasi",
+                        "Karena Nishimura mengundur-undurkan kemerdekaan, tidak menepati janji awal Jepang, dan melarang proklamasi atas dasar murni dari rakyat bukan berasal dari rapat PPKI",
+                        "Karena Nishimura mengusulkan agar proklamasi dilakukan di bawah pengawasan Jepang",
+                        "Karena Nishimura meremehkan kekuatan para pemuda Indonesia"
+                    ],
+                    answer: "Karena Nishimura mengundur-undurkan kemerdekaan, tidak menepati janji awal Jepang, dan melarang proklamasi atas dasar murni dari rakyat bukan berasal dari rapat PPKI"
+                }
+            ],
+            soekarno: [ // Tema 3: Soekarno
+                {
+                    question: "Apakah persiapan saat 'menculik' Soekarno ke Rengasdengklok sudah matang?",
+                    options: [
+                        "Ya, rencana tersebut disusun dengan sangat rapi dan detail oleh para pemuda",
+                        "Belum, nyatanya banyak sekali kegagalan dan ketidaksiapan pemuda hanya karena ego sesaat seperti mengenakan seragam militer yang kekecilan, arah tujuan ke Rengasdengklok yang tidak jelas kearah mananya",
+                        "Cukup matang, namun ada sedikit miskomunikasi antar kelompok pemuda",
+                        "Sangat matang, bahkan mendapat dukungan logistik dari beberapa perwira PETA"
+                    ],
+                    answer: "Belum, nyatanya banyak sekali kegagalan dan ketidaksiapan pemuda hanya karena ego sesaat seperti mengenakan seragam militer yang kekecilan, arah tujuan ke Rengasdengklok yang tidak jelas kearah mananya"
+                },
+                {
+                    question: "Saat di Rengasdengklok, apakah para pemuda melakukan sebuah ancaman ataupun kekerasan terhadap Soekarno dan keluarganya?",
+                    options: [
+                        "Ya, Soekarno diancam akan diserahkan kepada Kenpeitai jika menolak",
+                        "Tidak, nyatanya saat di Rengasdengklok mereka sangat diperlakukan baik seperti memberikan susu untuk Guntur dan bahkan kurir pun sampai mondar-mandir",
+                        "Ada sedikit intimidasi verbal, namun tidak ada kekerasan fisik",
+                        "Keluarga Soekarno ditempatkan di ruangan terpisah untuk menekan Soekarno"
+                    ],
+                    answer: "Tidak, nyatanya saat di Rengasdengklok mereka sangat diperlakukan baik seperti memberikan susu untuk Guntur dan bahkan kurir pun sampai mondar-mandir"
+                },
+                {
+                    question: "Saat membacakan teks proklamasi, Soekarno menderita sakit apa dan adakah hal lain yang dialaminya?",
+                    options: [
+                        "Sakit kepala hebat dan demam karena kelelahan",
+                        "Sakit perut akibat makanan yang tidak higienis",
+                        "Soekarno menderita sakit malaria, dan dia pun begadang selama 2 hari tanpa tidur dengan tenang",
+                        "Hanya flu ringan namun kondisi mental sangat tertekan"
+                    ],
+                    answer: "Soekarno menderita sakit malaria, dan dia pun begadang selama 2 hari tanpa tidur dengan tenang"
+                },
+                {
+                    question: "Mengapa Achmad Soebardjo dipilih untuk menjemput Soekarno dari Rengasdengklok?",
+                    options: [
+                        "Karena Soebardjo memiliki akses langsung ke pimpinan tentara Jepang",
+                        "Karena dia adalah orang yang dekat dengan golongan muda dan juga kawan dekatnya Soekarno",
+                        "Karena Soebardjo adalah satu-satunya yang mengetahui lokasi Soekarno disembunyikan",
+                        "Karena Soebardjo menawarkan jaminan keamanan pribadi kepada para pemuda"
+                    ],
+                    answer: "Karena dia adalah orang yang dekat dengan golongan muda dan juga kawan dekatnya Soekarno"
+                },
+                {
+                    question: "Apakah persiapan kemerdekaan saat 17 Agustus 1945 dilakukan dengan sangat matang dan sempurna?",
+                    options: [
+                        "Ya, segala sesuatunya dipersiapkan secara detail oleh panitia khusus",
+                        "Cukup matang, meskipun ada beberapa kekurangan kecil dalam perlengkapan upacara",
+                        "Tidak, nyatanya saat proklamasi melakukan pengibaran bendera hanya dengan batang bambu yang buatan kasar dengan sekeliling yang menyaksikan peristiwa tersebut tak ada wartawan bahkan baris berbaris hanya proklamasi yang khidmat saja yang dilakukan",
+                        "Sangat matang, bahkan siaran radio sudah disiapkan untuk menjangkau seluruh negeri"
+                    ],
+                    answer: "Tidak, nyatanya saat proklamasi melakukan pengibaran bendera hanya dengan batang bambu yang buatan kasar dengan sekeliling yang menyaksikan peristiwa tersebut tak ada wartawan bahkan baris berbaris hanya proklamasi yang khidmat saja yang dilakukan"
+                }
+            ]
+        };
+        // ====================================================================================
+        // AKHIR DATA KUIS
+        // ====================================================================================
+
+
+        const themeSelectionScreen = document.getElementById('theme-selection-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+
+        const themeButtons = document.querySelectorAll('.theme-button');
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackArea = document.getElementById('feedback-area');
+
+        const finalScoreEl = document.getElementById('final-score');
+        const resultsDetailsEl = document.getElementById('results-details');
+        const backToThemesButton = document.getElementById('back-to-themes-button');
+
+        const correctSurpriseEl = document.getElementById('correct-surprise');
+        const incorrectSurpriseEl = document.getElementById('incorrect-surprise');
+
+        let currentTheme = '';
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = []; // Untuk menyimpan jawaban pengguna dan statusnya
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        themeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                currentTheme = button.dataset.theme;
+                if (quizData[currentTheme]) {
+                    startQuiz(currentTheme);
+                } else {
+                    alert("Tema tidak ditemukan!");
+                }
+            });
+        });
+
+        function switchScreen(activeScreen) {
+            document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+            activeScreen.classList.add('active');
+        }
+
+        function startQuiz(theme) {
+            currentQuestions = [...quizData[theme]]; // Salin array agar tidak mengubah data asli
+            shuffleArray(currentQuestions); // Acak soal
+            currentQuestions = currentQuestions.slice(0, 5); // Ambil 5 soal (jika ada lebih dari 5)
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = [];
+            feedbackArea.textContent = '';
+            feedbackArea.className = '';
+            switchScreen(quizScreen);
+            displayQuestion();
+        }
+
+        function displayQuestion() {
+            if (currentQuestionIndex < currentQuestions.length) {
+                const questionData = currentQuestions[currentQuestionIndex];
+                questionNumberEl.textContent = `Pertanyaan ${currentQuestionIndex + 1} dari ${currentQuestions.length}`;
+                questionTextEl.textContent = questionData.question;
+                optionsContainer.innerHTML = '';
+
+                const shuffledOptions = [...questionData.options];
+                shuffleArray(shuffledOptions); // Acak pilihan jawaban
+
+                shuffledOptions.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.addEventListener('click', () => selectAnswer(option, questionData.answer, button));
+                    optionsContainer.appendChild(button);
+                });
+            } else {
+                showResults();
+            }
+        }
+
+        function selectAnswer(selectedOption, correctAnswer, button) {
+            // Nonaktifkan semua tombol pilihan
+            const optionButtons = optionsContainer.querySelectorAll('button');
+            optionButtons.forEach(btn => btn.disabled = true);
+
+            const isCorrect = selectedOption === correctAnswer;
+            userAnswers.push({
+                question: currentQuestions[currentQuestionIndex].question,
+                selected: selectedOption,
+                correctAnswer: correctAnswer,
+                isCorrect: isCorrect
+            });
+
+            if (isCorrect) {
+                score++;
+                button.classList.add('correct');
+                feedbackArea.textContent = "Jawaban Benar!";
+                feedbackArea.className = 'correct';
+                showSurprise(correctSurpriseEl);
+            } else {
+                button.classList.add('incorrect');
+                feedbackArea.textContent = `Salah. Jawaban yang benar adalah: ${correctAnswer}`;
+                feedbackArea.className = 'incorrect';
+                showSurprise(incorrectSurpriseEl);
+
+                // Tandai jawaban yang benar
+                optionButtons.forEach(btn => {
+                    if (btn.textContent === correctAnswer) {
+                        btn.classList.add('show-correct');
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                feedbackArea.textContent = '';
+                feedbackArea.className = '';
+                hideSurprise(correctSurpriseEl);
+                hideSurprise(incorrectSurpriseEl);
+                currentQuestionIndex++;
+                displayQuestion();
+            }, 5000); // Tunggu 5 detik
+        }
+
+        function showSurprise(element) {
+            element.classList.add('active');
+        }
+        function hideSurprise(element) {
+            element.classList.remove('active');
+        }
+
+
+        function showResults() {
+            switchScreen(resultsScreen);
+            finalScoreEl.textContent = `Skor Anda: ${score} dari ${currentQuestions.length}`;
+            resultsDetailsEl.innerHTML = ''; // Kosongkan detail sebelumnya
+
+            currentQuestions.forEach((questionData, index) => {
+                const userAnswerData = userAnswers[index];
+                const resultItem = document.createElement('div');
+                resultItem.classList.add('result-item');
+
+                let detailHTML = `<strong>Soal ${index + 1}:</strong> ${questionData.question}<br>`;
+                if (userAnswerData) { // Cek jika ada jawaban untuk soal ini
+                    detailHTML += `Jawaban Anda: <span class="user-answer">${userAnswerData.selected}</span><br>`;
+                    if (userAnswerData.isCorrect) {
+                        resultItem.classList.add('correct');
+                        detailHTML += `<span style="color: green; font-weight: bold;">(Benar)</span>`;
+                    } else {
+                        resultItem.classList.add('incorrect');
+                        detailHTML += `Jawaban yang Benar: <span class="correct-answer-info">${userAnswerData.correctAnswer}</span>`;
+                    }
+                } else { // Jika soal tidak terjawab (seharusnya tidak terjadi di flow ini)
+                     detailHTML += `<span>Tidak dijawab</span><br>`;
+                     detailHTML += `Jawaban yang Benar: <span class="correct-answer-info">${questionData.answer}</span>`;
+                     resultItem.classList.add('incorrect');
+                }
+                resultItem.innerHTML = detailHTML;
+                resultsDetailsEl.appendChild(resultItem);
+            });
+        }
+
+        backToThemesButton.addEventListener('click', () => {
+            switchScreen(themeSelectionScreen);
+        });
+
+        // Mulai dengan layar pemilihan tema
+        switchScreen(themeSelectionScreen);
+
+    </script>
+</body>
+</html>
